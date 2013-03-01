@@ -10,6 +10,7 @@ module Spree
         # The Balanced ActiveMerchant gateway supports passing the token directly as the creditcard parameter
         creditcard = token
       end
+
       provider.authorize(money, creditcard, gateway_options)
     end
 
@@ -23,8 +24,8 @@ module Spree
       options = {}
       options[:email] = payment.order.email
       options[:login] = preferred_login
-      card_uri = provider.store(payment.source, options)
-      payment.source.update_attributes!(:gateway_payment_profile_id => card_uri)
+      response = provider.store(payment.source, options)
+      payment.source.update_attributes!(:gateway_payment_profile_id => response[:card_uri], :gateway_customer_profile_id => response[:account_uri])
     end
 
     def options_with_test_preference
