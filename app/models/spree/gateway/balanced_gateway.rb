@@ -25,7 +25,11 @@ module Spree
       options[:email] = payment.order.email
       options[:login] = preferred_login
       response = provider.store(payment.source, options)
-      payment.source.update_attributes!(:gateway_payment_profile_id => response[:card_uri], :gateway_customer_profile_id => response[:account_uri])
+      if response.is_a?(Hash)
+        payment.source.update_attributes!(:gateway_payment_profile_id => response[:card_uri], :gateway_customer_profile_id => response[:account_uri])     
+      else
+        payment.send(:gateway_error, response.message) unless response.success?
+      end
     end
 
     def options_with_test_preference
