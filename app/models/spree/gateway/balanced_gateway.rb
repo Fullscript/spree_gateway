@@ -26,7 +26,6 @@ module Spree
       options[:login] = preferred_login
 
       response = provider.store(payment.source, options)
-      debugger
 
       response = provider.store(payment.source, options)
        
