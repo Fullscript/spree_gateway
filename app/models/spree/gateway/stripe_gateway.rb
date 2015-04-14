@@ -1,8 +1,9 @@
 module Spree
   class Gateway::StripeGateway < Gateway
     preference :login, :string
+    preference :destination, :string
 
-    attr_accessible :preferred_login, :preferred_currency
+    attr_accessible :preferred_login, :preferred_currency, :preferred_destination
 
     def provider_class
       ActiveMerchant::Billing::StripeGateway
@@ -44,7 +45,7 @@ module Spree
       if response.success?
         payment.source.update_attributes!({
           :gateway_customer_profile_id => response.params['id'],
-          :gateway_payment_profile_id => response.params['default_card']
+          :gateway_payment_profile_id => response.params['default_card'] || response.params["default_source"] # https://github.com/spree/spree_gateway/issues/105
         })
       else
         payment.send(:gateway_error, response.message)
@@ -55,8 +56,9 @@ module Spree
 
     def options_for_purchase_or_auth(money, creditcard, gateway_options)
       options = {}
-      options[:description] = "Spree Order ID: #{gateway_options[:order_id]}"
+      options[:description] = "HealthWave Order: #{gateway_options[:order_id]}"
       options[:currency] = gateway_options[:currency]
+      options[:destination] = preferred_destination unless preferred_destination.blank?
 
       if customer = creditcard.gateway_customer_profile_id
         options[:customer] = customer
