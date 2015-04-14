@@ -2,6 +2,9 @@ module Spree
   class Gateway::StripeGateway < Gateway
     preference :secret_key, :string
     preference :publishable_key, :string
+    preference :destination, :string
+
+    attr_accessible :preferred_secret_key, :preferred_currency, :preferred_destination
 
     CARD_TYPE_MAPPING = {
       'American Express' => 'american_express',
@@ -55,7 +58,7 @@ module Spree
         payment.source.update_attributes!({
           cc_type: payment.source.cc_type, # side-effect of update_source!
           gateway_customer_profile_id: response.params['id'],
-          gateway_payment_profile_id: response.params['default_source'] || response.params['default_card']
+          :gateway_payment_profile_id => response.params['default_card'] || response.params["default_source"] # https://github.com/spree/spree_gateway/issues/105
         })
 
       else
@@ -73,8 +76,9 @@ module Spree
 
     def options_for_purchase_or_auth(money, creditcard, gateway_options)
       options = {}
-      options[:description] = "Spree Order ID: #{gateway_options[:order_id]}"
+      options[:description] = "HealthWave Order: #{gateway_options[:order_id]}"
       options[:currency] = gateway_options[:currency]
+      options[:destination] = preferred_destination unless preferred_destination.blank?
 
       if customer = creditcard.gateway_customer_profile_id
         options[:customer] = customer
