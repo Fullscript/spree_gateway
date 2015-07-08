@@ -4,8 +4,6 @@ module Spree
     preference :publishable_key, :string
     preference :destination, :string
 
-    attr_accessible :preferred_secret_key, :preferred_currency, :preferred_destination
-
     CARD_TYPE_MAPPING = {
       'American Express' => 'american_express',
       'Diners Club' => 'diners_club',
