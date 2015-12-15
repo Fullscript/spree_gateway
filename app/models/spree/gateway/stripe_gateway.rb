@@ -50,14 +50,26 @@ module Spree
       }.merge! address_for(payment)
 
       source = update_source!(payment.source)
+      if source.number.blank? && source.gateway_payment_profile_id.present?
+        creditcard = source.gateway_payment_profile_id
+      else
+        creditcard = source
+      end
 
-      response = provider.store(source, options)
+      response = provider.store(creditcard, options)
       if response.success?
+        source_information = { cc_type: payment.source.cc_type }
+        if data = response.params["sources"]["data"].first
+          source_information[:last_digits] = data["last4"]
+          source_information[:month]       = data["exp_month"]
+          source_information[:year]        = data["exp_year"]
+          source_information[:cc_type]     = data["brand"].downcase if data["brand"].present?
+        end
+
         payment.source.update_attributes!({
-          cc_type: payment.source.cc_type, # side-effect of update_source!
           gateway_customer_profile_id: response.params['id'],
-          :gateway_payment_profile_id => response.params['default_card'] || response.params["default_source"] # https://github.com/spree/spree_gateway/issues/105
-        })
+          gateway_payment_profile_id: response.params['default_source'] || response.params['default_card']
+        }.merge(source_information))
 
       else
         payment.send(:gateway_error, response.message)
