@@ -63,6 +63,8 @@ Stripe.setPublishableKey("<%= ENV['STRIPE_PUB_KEY'] %>");
         }, Spree.stripeAdditionalInfo);
         Stripe.card.createToken(params, stripeResponseHandler);
         return false;
+      } else {
+        return Spree.stripePaymentMethod.parents("form").get(0).submit();
       }
     });
   });
