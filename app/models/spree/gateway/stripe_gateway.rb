@@ -89,6 +89,8 @@ module Spree
       options[:description] = "HealthWave Order: #{gateway_options[:order_id]}"
       options[:currency] = gateway_options[:currency]
       options[:destination] = preferred_destination unless preferred_destination.blank?
+      # Fee will only be present here on purchase! (and we need it!)
+      options[:application_fee] = gateway_options[:application_fee] if gateway_options[:application_fee].present?
 
       if customer = creditcard.gateway_customer_profile_id
         options[:customer] = customer
