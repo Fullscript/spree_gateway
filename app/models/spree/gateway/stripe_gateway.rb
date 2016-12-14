@@ -86,7 +86,7 @@ module Spree
 
     def options_for_purchase_or_auth(money, creditcard, gateway_options)
       options = {}
-      options[:description] = "HealthWave Order: #{gateway_options[:order_id]}"
+      options[:description] = "Fullscript Order: #{gateway_options[:order_id]}"
       options[:currency] = gateway_options[:currency]
       options[:destination] = preferred_destination unless preferred_destination.blank?
       # Fee will only be present here on purchase! (and we need it!)
