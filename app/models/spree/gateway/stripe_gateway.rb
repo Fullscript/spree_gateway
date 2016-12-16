@@ -2,6 +2,7 @@ module Spree
   class Gateway::StripeGateway < Gateway
     preference :secret_key, :string
     preference :publishable_key, :string
+    preference :destination, :string
 
     CARD_TYPE_MAPPING = {
       'American Express' => 'american_express',
@@ -34,7 +35,7 @@ module Spree
     end
 
     def credit(money, creditcard, response_code, gateway_options)
-      provider.refund(money, response_code, {})
+      provider.refund(money, response_code, gateway_options)
     end
 
     def void(response_code, creditcard, gateway_options)
@@ -49,14 +50,26 @@ module Spree
       }.merge! address_for(payment)
 
       source = update_source!(payment.source)
+      if source.number.blank? && source.gateway_payment_profile_id.present?
+        creditcard = source.gateway_payment_profile_id
+      else
+        creditcard = source
+      end
 
-      response = provider.store(source, options)
+      response = provider.store(creditcard, options)
       if response.success?
+        source_information = { cc_type: payment.source.cc_type }
+        if data = response.params["sources"]["data"].first
+          source_information[:last_digits] = data["last4"]
+          source_information[:month]       = data["exp_month"]
+          source_information[:year]        = data["exp_year"]
+          source_information[:cc_type]     = data["brand"].downcase if data["brand"].present?
+        end
+
         payment.source.update_attributes!({
-          cc_type: payment.source.cc_type, # side-effect of update_source!
           gateway_customer_profile_id: response.params['id'],
           gateway_payment_profile_id: response.params['default_source'] || response.params['default_card']
-        })
+        }.merge(source_information))
 
       else
         payment.send(:gateway_error, response.message)
@@ -73,8 +86,13 @@ module Spree
 
     def options_for_purchase_or_auth(money, creditcard, gateway_options)
       options = {}
-      options[:description] = "Spree Order ID: #{gateway_options[:order_id]}"
+      options[:description] = "Fullscript Order: #{gateway_options[:order_id]}"
       options[:currency] = gateway_options[:currency]
+      options[:destination] = preferred_destination unless preferred_destination.blank?
+      # Fee will only be present here on purchase! (and we need it!)
+      options[:application_fee] = gateway_options[:application_fee] if gateway_options[:application_fee].present?
+      # Pass version to activemerchant or it will fallback to stripe api version specified in gem
+      options[:version] = gateway_options[:api_version] if gateway_options[:api_version].present?
 
       if customer = creditcard.gateway_customer_profile_id
         options[:customer] = customer
