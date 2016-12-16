@@ -91,6 +91,8 @@ module Spree
       options[:destination] = preferred_destination unless preferred_destination.blank?
       # Fee will only be present here on purchase! (and we need it!)
       options[:application_fee] = gateway_options[:application_fee] if gateway_options[:application_fee].present?
+      # Pass version to activemerchant or it will fallback to stripe api version specified in gem
+      options[:version] = gateway_options[:api_version] if gateway_options[:api_version].present?
 
       if customer = creditcard.gateway_customer_profile_id
         options[:customer] = customer
